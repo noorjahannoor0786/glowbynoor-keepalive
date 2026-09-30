@@ -1,0 +1,30 @@
+name: Keepalive Ping
+
+on:
+  schedule:
+    # Har 4 min: Render free tier 15 min no-traffic par spin down hota hai.
+    # Public repo = GitHub Actions minutes unlimited.
+    - cron: "*/4 * * * *"
+  workflow_dispatch:
+
+concurrency:
+  group: keepalive-ping
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping glowbynoor.in
+        run: |
+          code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://glowbynoor.in)
+          ttfb=$(curl -s -o /dev/null -w "%{time_starttransfer}" --max-time 60 https://glowbynoor.in)
+          echo "http=$code ttfb=${ttfb}s"
+          if [ "$code" != "200" ]; then
+            sleep 20
+            code=$(curl -s -o /dev/null -w "%{http_code}" --max-time 60 https://glowbynoor.in)
+            echo "retry http=$code"
+          fi
+          if [ "$code" != "200" ]; then
+            echo "::warning::glowbynoor.in 200 nahi de raha (code=$code)"
+          fi
